@@ -16,15 +16,11 @@
 
 package org.springframework.transaction.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+
+import java.lang.annotation.*;
 
 /**
  * Enables Spring's annotation-driven transaction management capability, similar to
@@ -173,6 +169,8 @@ public @interface EnableTransactionManagement {
 	 * {@code @Async} annotation will be upgraded to subclass proxying at the same
 	 * time. This approach has no negative impact in practice unless one is explicitly
 	 * expecting one type of proxy vs another, e.g. in tests.
+	 * 该属性控制使用 CGLIB(true) 还是 JDK(false 默认) 动态代理生成代理对象，并且这个属性只有在
+	 * mode 为 {@link AdviceMode#PROXY} 才有效
 	 */
 	boolean proxyTargetClass() default false;
 
@@ -185,6 +183,7 @@ public @interface EnableTransactionManagement {
 	 * ignored since Spring's interceptor does not even kick in for such a runtime
 	 * scenario. For a more advanced mode of interception, consider switching this to
 	 * {@link AdviceMode#ASPECTJ}.
+	 * PROXY 这种代理模式只有代理对象调用时才会被事务拦截，方法内部调用该类的其他事务方法不会被拦截。
 	 */
 	AdviceMode mode() default AdviceMode.PROXY;
 

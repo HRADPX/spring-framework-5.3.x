@@ -35,6 +35,9 @@ import org.springframework.beans.BeansException;
  * @since 1.0.2
  * @param <T> the object type
  * @see FactoryBean
+ * 这个接口通过封装一个通用工厂在每次调用来返回一个新的实例，它和 FactoryBean 接口相似.
+ * FactoryBean 通常是作为 SPI 来从 beanFactory 中获取实例，而该接口通常意味着作为
+ * API 通过注入给其他 bean
  */
 @FunctionalInterface
 public interface ObjectFactory<T> {

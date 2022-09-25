@@ -173,6 +173,8 @@ import javax.servlet.ServletException;
  * @see org.springframework.web.context.AbstractContextLoaderInitializer
  * @see org.springframework.web.servlet.support.AbstractDispatcherServletInitializer
  * @see org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer
+ * 基于 servlet 3.0 规范，在 servlet 容器启动时，会自动探测 WebApplicationInitializer 的实现类，完成 servlets、
+ * filters、listeners 等的注入。
  */
 public interface WebApplicationInitializer {
 

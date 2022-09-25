@@ -702,8 +702,8 @@ application/vnd.koan				skp skd skt skm
 application/vnd.kodak-descriptor		sse
 application/vnd.las.las+xml			lasxml
 # application/vnd.liberty-request+xml
-application/vnd.llamagraphics.life-balance.desktop	lbd
-application/vnd.llamagraphics.life-balance.exchange+xml	lbe
+application/vnd.llamagraphics.com.hr.life-balance.desktop	lbd
+application/vnd.llamagraphics.com.hr.life-balance.exchange+xml	lbe
 application/vnd.lotus-1-2-3			123
 application/vnd.lotus-approach			apr
 application/vnd.lotus-freelance			pre

@@ -16,19 +16,18 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aspectj.lang.reflect.PerClauseKind;
-
 import org.springframework.aop.Advisor;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Helper for retrieving @AspectJ beans from a BeanFactory and building
@@ -81,6 +80,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	 * @see #isEligibleBean
 	 */
 	public List<Advisor> buildAspectJAdvisors() {
+		// 第二次进入这个方法，由于第一次已经解析过切面类了，此时aspectBeanNames 缓存了第一次的切面了，就不会进入下面的 if 语句
 		List<String> aspectNames = this.aspectBeanNames;
 
 		if (aspectNames == null) {
@@ -89,6 +89,12 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					/**
+					 * AOP 功能中传入的是 Object.class 对象，这是因为切面是我们自己定义的，可以是任意类型的，所以这里传入 Object.class
+					 * 表示去容器中获取所有类的名称，然后再经过一一遍历，这个过程是十分耗性能的，所以 Spring 再这里加入了保存切面信息的功能。
+					 * 	但是在事务功能不一样，事务模块的狗哦功能是直接从容器中获取 Advisor 类型的，选择范围很小，而且消耗的性能小，所以 Spring
+					 * 在事务模块并没有加入缓存来保存事务相关的 Advisor
+					 */
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
@@ -101,14 +107,23 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
+						// 判断是否是切面，判断类是否存在 @Aspect 注解
 						if (this.advisorFactory.isAspect(beanType)) {
+							// 切面
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								/**
+								 * 找出切面种的所有通知，将其缓存，因为这是一个耗费时间的方法，它会拿到这个切面类的所有方法，然后依次遍历，
+								 * 判断方法是否存在 AOP (@Pointcut、@Around, @Before, @After, @AfterReturning, @AfterThrowing)
+								 * 这 6 种注解之一，如果不存在，则跳过不需要解析，如果存在，则会根据不同的注解创建不同的对象(@PointCut 注解
+								 * 除外)，并将解析结果缓存
+								 */
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
 								if (this.beanFactory.isSingleton(beanName)) {
+									// 缓存通知
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
 								else {

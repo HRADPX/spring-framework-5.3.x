@@ -16,16 +16,8 @@
 
 package org.springframework.web.reactive.resource;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import reactor.core.publisher.Mono;
-
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -40,6 +32,9 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
+import reactor.core.publisher.Mono;
+
+import java.util.*;
 
 /**
  * A central component to use to obtain the public URL path that clients should
@@ -48,6 +43,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
  * <p>This class is aware of Spring WebFlux handler mappings used to serve static
  * resources and uses the {@code ResourceResolver} chains of the configured
  * {@code ResourceHttpRequestHandler}s to make its decisions.
+ *
+ * ContextRefreshedEvent: 存储 web 静态路径到 handlerMap 中
  *
  * @author Rossen Stoyanchev
  * @author Brian Clozel

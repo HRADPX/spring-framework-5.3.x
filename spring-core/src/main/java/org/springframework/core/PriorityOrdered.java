@@ -43,6 +43,9 @@ package org.springframework.core;
  * @since 2.5
  * @see org.springframework.beans.factory.config.PropertyOverrideConfigurer
  * @see org.springframework.beans.factory.config.PropertyPlaceholderConfigurer
+ * 该接口是 Ordered 接口的扩展，用于 Spring 内部，该接口的优先高于 Ordered 接口的优先级
+ * 通常在 Spring 内部处理一个 Ordered 集合，会将它们分为独立的两个集合，PriorityOrdered 集合的
+ * 优先级大于 Ordered 集合的优先级，各个集合里面的优先级按照 {@link Ordered#getOrder()} 的值来确定。
  */
 public interface PriorityOrdered extends Ordered {
 }

@@ -46,6 +46,9 @@ public class TransactionManagementConfigurationSelector extends AdviceModeImport
 	@Override
 	protected String[] selectImports(AdviceMode adviceMode) {
 		switch (adviceMode) {
+			// 向 Spring 容器中注入了以下两个类：
+			// AutoProxyRegistrar 它实现了 ImportBeanDefinitionRegistrar
+			// ProxyTransactionManagementConfiguration 它是一个配置类
 			case PROXY:
 				return new String[] {AutoProxyRegistrar.class.getName(),
 						ProxyTransactionManagementConfiguration.class.getName()};

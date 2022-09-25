@@ -1240,7 +1240,7 @@ object, as in the preceding example, or specify the interfaces to be proxied in 
 constructor.
 
 You can add advices (with interceptors as a specialized kind of advice), advisors, or both
-and manipulate them for the life of the `ProxyFactory`. If you add an
+and manipulate them for the com.hr.life of the `ProxyFactory`. If you add an
 `IntroductionInterceptionAroundAdvisor`, you can cause the proxy to implement additional
 interfaces.
 

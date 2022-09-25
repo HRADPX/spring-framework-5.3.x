@@ -16,18 +16,12 @@
 
 package org.springframework.transaction.support;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.OrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.*;
 
 /**
  * Central delegate that manages resources and transaction synchronizations per thread.
@@ -70,12 +64,17 @@ import org.springframework.util.Assert;
  * @see org.springframework.transaction.jta.JtaTransactionManager
  * @see org.springframework.jdbc.datasource.DataSourceTransactionManager
  * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection
+ * 该类用于管理每个线程中的资源和事务同步相关信息.
+ * 	只有事务管理器处于 active 状态时，资源相关的代码才会注册事务同步信息，否则这些信息需要立刻被清除
  */
 public abstract class TransactionSynchronizationManager {
 
+	// 存储事务资源，如数据库连接
 	private static final ThreadLocal<Map<Object, Object>> resources =
 			new NamedThreadLocal<>("Transactional resources");
 
+	// 事务同步激活标志，在完成获取连接和绑定线程后，激活该标志位
+	/** @see AbstractPlatformTransactionManager#startTransaction */
 	private static final ThreadLocal<Set<TransactionSynchronization>> synchronizations =
 			new NamedThreadLocal<>("Transaction synchronizations");
 
@@ -255,6 +254,8 @@ public abstract class TransactionSynchronizationManager {
 		if (isSynchronizationActive()) {
 			throw new IllegalStateException("Cannot activate transaction synchronization - already active");
 		}
+		// 为当前线程激活事务同步
+		// 这个方法时在第一次获取数据库连接后， prepareSynchronization 方法中被调用，激活当前线程的事务同步.
 		synchronizations.set(new LinkedHashSet<>());
 	}
 

@@ -16,8 +16,6 @@
 
 package org.springframework.scheduling.annotation;
 
-import java.lang.annotation.Annotation;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +23,8 @@ import org.springframework.context.annotation.Role;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.scheduling.config.TaskManagementConfigUtils;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
 
 /**
  * {@code @Configuration} class that registers the Spring infrastructure beans necessary
@@ -41,13 +41,21 @@ import org.springframework.util.Assert;
 @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 public class ProxyAsyncConfiguration extends AbstractAsyncConfiguration {
 
+	/**
+	 * 注册一个 BeanPostProcessor，即 AsyncAnnotationBeanPostProcessor, 该后置处理器的中维护了执行异步任务的线程池和
+	 * 异常处理器（在该配置类的父类中解析）
+	 * @see AsyncAnnotationBeanPostProcessor
+	 * 在该配置类的父类中解析 {@link AsyncConfigurer} 得到用户自定义的线程池和异常处理
+	 */
 	@Bean(name = TaskManagementConfigUtils.ASYNC_ANNOTATION_PROCESSOR_BEAN_NAME)
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 	public AsyncAnnotationBeanPostProcessor asyncAdvisor() {
 		Assert.notNull(this.enableAsync, "@EnableAsync annotation metadata was not injected");
+		// 创建 AsyncAnnotationBeanPostProcessor，它是一个 BeanPostProcessor
 		AsyncAnnotationBeanPostProcessor bpp = new AsyncAnnotationBeanPostProcessor();
 		bpp.configure(this.executor, this.exceptionHandler);
 		Class<? extends Annotation> customAsyncAnnotation = this.enableAsync.getClass("annotation");
+		// 自定义注解
 		if (customAsyncAnnotation != AnnotationUtils.getDefaultValue(EnableAsync.class, "annotation")) {
 			bpp.setAsyncAnnotationType(customAsyncAnnotation);
 		}

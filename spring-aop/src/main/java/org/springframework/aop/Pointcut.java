@@ -29,6 +29,7 @@ package org.springframework.aop;
  * @see org.springframework.aop.support.Pointcuts
  * @see org.springframework.aop.support.ClassFilters
  * @see org.springframework.aop.support.MethodMatchers
+ * 这个接口被分成两个部分，这两个部分可以被组合起来
  */
 public interface Pointcut {
 

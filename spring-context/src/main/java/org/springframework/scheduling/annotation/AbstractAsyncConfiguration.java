@@ -16,12 +16,6 @@
 
 package org.springframework.scheduling.annotation;
 
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +26,12 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.function.SingletonSupplier;
+
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base {@code Configuration} class providing common structure for enabling
@@ -58,6 +58,7 @@ public abstract class AbstractAsyncConfiguration implements ImportAware {
 
 	@Override
 	public void setImportMetadata(AnnotationMetadata importMetadata) {
+		// 解析 @EnableAsync 注解
 		this.enableAsync = AnnotationAttributes.fromMap(
 				importMetadata.getAnnotationAttributes(EnableAsync.class.getName()));
 		if (this.enableAsync == null) {
@@ -68,6 +69,8 @@ public abstract class AbstractAsyncConfiguration implements ImportAware {
 
 	/**
 	 * Collect any {@link AsyncConfigurer} beans through autowiring.
+	 * 从容器获取用户定义的 AsyncConfigurer，这个接口返回类异步调用要使用的自定义线程池和异常处理.
+	 * 如果没有定义，则使用默认，且只能有一个 AsyncConfigurer
 	 */
 	@Autowired
 	void setConfigurers(ObjectProvider<AsyncConfigurer> configurers) {
@@ -76,11 +79,13 @@ public abstract class AbstractAsyncConfiguration implements ImportAware {
 			if (CollectionUtils.isEmpty(candidates)) {
 				return null;
 			}
+			// 只能有一个 AsyncConfigurer 的实现
 			if (candidates.size() > 1) {
 				throw new IllegalStateException("Only one AsyncConfigurer may exist");
 			}
 			return candidates.get(0);
 		});
+		// 异步执行要使用的线程池和异常处理
 		this.executor = adapt(configurer, AsyncConfigurer::getAsyncExecutor);
 		this.exceptionHandler = adapt(configurer, AsyncConfigurer::getAsyncUncaughtExceptionHandler);
 	}

@@ -34,6 +34,9 @@ import org.springframework.lang.Nullable;
  * @author Phillip Webb
  * @author Stephane Nicoll
  * @since 4.0
+ * 该接口实现了 ImportSelector 接口，是它的一种变体，它会在 Spring 处理完所以 Configuration 之后执行，
+ * 这种类型的 selector 在导入的 bean 含有 @Conditional 注解时非常有用
+ * Note：SpringBoot 的自动装配就是通过 @Import 导入了这种类型的 Bean
  */
 public interface DeferredImportSelector extends ImportSelector {
 

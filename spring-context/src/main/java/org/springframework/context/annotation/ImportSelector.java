@@ -16,10 +16,10 @@
 
 package org.springframework.context.annotation;
 
-import java.util.function.Predicate;
-
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.Nullable;
+
+import java.util.function.Predicate;
 
 /**
  * Interface to be implemented by types that determine which @{@link Configuration}
@@ -57,6 +57,7 @@ import org.springframework.lang.Nullable;
  * @see Import
  * @see ImportBeanDefinitionRegistrar
  * @see Configuration
+ * 该接口可以向 Spring 注入通过指定规则生成的 configClass 的全路径类名
  */
 public interface ImportSelector {
 

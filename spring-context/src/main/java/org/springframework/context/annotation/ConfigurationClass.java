@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.factory.parsing.Location;
 import org.springframework.beans.factory.parsing.Problem;
 import org.springframework.beans.factory.parsing.ProblemReporter;
@@ -34,6 +28,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
+import java.util.*;
+
 /**
  * Represents a user-defined {@link Configuration @Configuration} class.
  * <p>Includes a set of {@link Bean} methods, including all such methods
@@ -45,6 +41,7 @@ import org.springframework.util.ClassUtils;
  * @since 3.0
  * @see BeanMethod
  * @see ConfigurationClassParser
+ * 对 Configuration class 的包装，该类包含了注解元数据信息、beanName、被 @Import 注解导入的类、以及 @Bean 方法
  */
 final class ConfigurationClass {
 
@@ -55,13 +52,16 @@ final class ConfigurationClass {
 	@Nullable
 	private String beanName;
 
+	/** 是否被 @Import 注解导入的 */
 	private final Set<ConfigurationClass> importedBy = new LinkedHashSet<>(1);
 
+	/** 存储当前类和所有接口中的 @Bean 方法 */
 	private final Set<BeanMethod> beanMethods = new LinkedHashSet<>();
 
 	private final Map<String, Class<? extends BeanDefinitionReader>> importedResources =
 			new LinkedHashMap<>();
 
+	/** 存储被 @Import 注解导入 ImportBeanDefinitionRegistrar 的类 */
 	private final Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> importBeanDefinitionRegistrars =
 			new LinkedHashMap<>();
 
@@ -115,6 +115,7 @@ final class ConfigurationClass {
 	 * @param clazz the underlying {@link Class} to represent
 	 * @param importedBy the configuration class importing this one (or {@code null})
 	 * @since 3.1.1
+	 * 这个构造方法用于 @Import 注解注入的配置类
 	 */
 	ConfigurationClass(Class<?> clazz, @Nullable ConfigurationClass importedBy) {
 		this.metadata = AnnotationMetadata.introspect(clazz);

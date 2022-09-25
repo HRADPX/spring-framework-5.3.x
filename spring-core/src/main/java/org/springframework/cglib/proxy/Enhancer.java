@@ -16,46 +16,18 @@
 
 package org.springframework.cglib.proxy;
 
+import org.springframework.asm.ClassVisitor;
+import org.springframework.asm.Label;
+import org.springframework.asm.Type;
+import org.springframework.cglib.core.*;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.springframework.asm.ClassVisitor;
-import org.springframework.asm.Label;
-import org.springframework.asm.Type;
-import org.springframework.cglib.core.AbstractClassGenerator;
-import org.springframework.cglib.core.ClassEmitter;
-import org.springframework.cglib.core.CodeEmitter;
-import org.springframework.cglib.core.CodeGenerationException;
-import org.springframework.cglib.core.CollectionUtils;
-import org.springframework.cglib.core.Constants;
-import org.springframework.cglib.core.DuplicatesPredicate;
-import org.springframework.cglib.core.EmitUtils;
-import org.springframework.cglib.core.KeyFactory;
-import org.springframework.cglib.core.Local;
-import org.springframework.cglib.core.MethodInfo;
-import org.springframework.cglib.core.MethodInfoTransformer;
-import org.springframework.cglib.core.MethodWrapper;
-import org.springframework.cglib.core.ObjectSwitchCallback;
-import org.springframework.cglib.core.ProcessSwitchCallback;
-import org.springframework.cglib.core.ReflectUtils;
-import org.springframework.cglib.core.RejectModifierPredicate;
-import org.springframework.cglib.core.Signature;
-import org.springframework.cglib.core.Transformer;
-import org.springframework.cglib.core.TypeUtils;
-import org.springframework.cglib.core.VisibilityPredicate;
-import org.springframework.cglib.core.WeakCacheKey;
+import java.util.*;
 
 /**
  * Generates dynamic subclasses to enable method interception. This
@@ -632,7 +604,9 @@ public class Enhancer extends AbstractClassGenerator {
 	}
 
 	private static void getMethods(Class superclass, Class[] interfaces, List methods, List interfaceMethods, Set forcePublic) {
+		// 获取所有父类和实现接口中的方法
 		ReflectUtils.addAllMethods(superclass, methods);
+		// 获取 Enhancer 对象中设置的接口
 		List target = (interfaceMethods != null) ? interfaceMethods : methods;
 		if (interfaces != null) {
 			for (int i = 0; i < interfaces.length; i++) {
@@ -647,9 +621,11 @@ public class Enhancer extends AbstractClassGenerator {
 			}
 			methods.addAll(interfaceMethods);
 		}
+		// 过滤掉静态方法，所以配置类中 @Bean 注解的静态方法不会被拦截器拦截
 		CollectionUtils.filter(methods, new RejectModifierPredicate(Constants.ACC_STATIC));
 		CollectionUtils.filter(methods, new VisibilityPredicate(superclass, true));
 		CollectionUtils.filter(methods, new DuplicatesPredicate());
+		// 过滤掉 final 方法，final 修饰的方法不可被覆盖
 		CollectionUtils.filter(methods, new RejectModifierPredicate(Constants.ACC_FINAL));
 	}
 
@@ -723,6 +699,9 @@ public class Enhancer extends AbstractClassGenerator {
 		e.declare_field(Constants.ACC_PRIVATE | Constants.ACC_STATIC, CALLBACK_FILTER_FIELD, OBJECT_TYPE, null);
 
 		if (currentData == null) {
+			/**
+			 * 给所有方法设置对应的拦截器
+			 **/
 			emitMethods(e, methods, actualMethods);
 			emitConstructors(e, constructorInfo);
 		}

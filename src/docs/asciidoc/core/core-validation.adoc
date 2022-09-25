@@ -448,7 +448,7 @@ A couple of examples where property editing is used in Spring:
   of `PropertyEditor` implementations that you can manually bind in all subclasses of the
   `CommandController`.
 
-Spring has a number of built-in `PropertyEditor` implementations to make life easy.
+Spring has a number of built-in `PropertyEditor` implementations to make com.hr.life easy.
 They are all located in the `org.springframework.beans.propertyeditors`
 package. Most, (but not all, as indicated in the following table) are, by default, registered by
 `BeanWrapperImpl`. Where the property editor is configurable in some fashion, you can

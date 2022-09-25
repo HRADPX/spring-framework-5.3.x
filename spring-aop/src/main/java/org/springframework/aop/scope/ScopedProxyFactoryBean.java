@@ -16,8 +16,6 @@
 
 package org.springframework.aop.scope;
 
-import java.lang.reflect.Modifier;
-
 import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.aop.framework.ProxyConfig;
 import org.springframework.aop.framework.ProxyFactory;
@@ -31,6 +29,8 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.lang.reflect.Modifier;
 
 /**
  * Convenient proxy factory bean for scoped objects.
@@ -59,10 +59,17 @@ public class ScopedProxyFactoryBean extends ProxyConfig
 	private final SimpleBeanTargetSource scopedTargetSource = new SimpleBeanTargetSource();
 
 	/** The name of the target bean. */
+	/** 目标对象的 beanName，该属性在 Spring 属性装配方法 populateBean 中完成 */
+	/** @see ScopedProxyUtils#createScopedProxy */
 	@Nullable
 	private String targetBeanName;
 
-	/** The cached singleton proxy. */
+	/**
+	 * The cached singleton proxy.
+	 * 代理对象，这个对象在 BeanFactoryAware 的接口方法中生成，即在 setBeanFactory 方法中生成，
+	 * 对应是在 Spring 完成属性装配后的生命周期方法 initializeBean 中执行.
+	 * @see ScopedProxyFactoryBean#setBeanFactory
+	 */
 	@Nullable
 	private Object proxy;
 
@@ -94,9 +101,12 @@ public class ScopedProxyFactoryBean extends ProxyConfig
 
 		ProxyFactory pf = new ProxyFactory();
 		pf.copyFrom(this);
+		// beanFactory 通过这种传递关系到 ProxyFactory 对象中: beanFactory --> scopedTargetSource --> pf
 		pf.setTargetSource(this.scopedTargetSource);
 
 		Assert.notNull(this.targetBeanName, "Property 'targetBeanName' is required");
+		// targetBeanName = ScopedProxyUtils.TARGET_NAME_PREFIX + original beanName
+		// original beanClass not ScopedProxyFactoryBean class
 		Class<?> beanType = beanFactory.getType(this.targetBeanName);
 		if (beanType == null) {
 			throw new IllegalStateException("Cannot create scoped proxy for bean '" + this.targetBeanName +
@@ -108,12 +118,16 @@ public class ScopedProxyFactoryBean extends ProxyConfig
 
 		// Add an introduction that implements only the methods on ScopedObject.
 		ScopedObject scopedObject = new DefaultScopedObject(cbf, this.scopedTargetSource.getTargetBeanName());
+		// 设置方法拦截器，它实现了 MethodInterceptor
 		pf.addAdvice(new DelegatingIntroductionInterceptor(scopedObject));
 
 		// Add the AopInfrastructureBean marker to indicate that the scoped proxy
 		// itself is not subject to auto-proxying! Only its target bean is.
+		// AopInfrastructureBean 这个接口是 Spring AOP 基础组件的标记接口，实现该接口的 Bean 不会被 Spring 代理，只有目标类会被代理
+		/** @see AopInfrastructureBean*/
 		pf.addInterface(AopInfrastructureBean.class);
 
+		// 生成代理对象
 		this.proxy = pf.getProxy(cbf.getBeanClassLoader());
 	}
 

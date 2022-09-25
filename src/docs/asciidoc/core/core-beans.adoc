@@ -10508,7 +10508,7 @@ The following table describes the standard events that Spring provides:
 | Published when the `ApplicationContext` is being closed by using the `close()` method
   on the `ConfigurableApplicationContext` interface or via a JVM shutdown hook. Here,
   "closed" means that all singleton beans will be destroyed. Once the context is closed,
-  it reaches its end of life and cannot be refreshed or restarted.
+  it reaches its end of com.hr.life and cannot be refreshed or restarted.
 
 | `RequestHandledEvent`
 | A web-specific event telling all beans that an HTTP request has been serviced. This

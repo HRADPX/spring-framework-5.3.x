@@ -16,10 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -37,6 +33,10 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.MultiValueMap;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Internal class used to evaluate {@link Conditional} annotations.
@@ -77,7 +77,20 @@ class ConditionEvaluator {
 	 * @param phase the phase of the call
 	 * @return if the item should be skipped
 	 */
+	/**
+	 * 在 spring-boot 自动配置时需要根据这个方法判断 spring.factories 文件中的自动配置类是否需要解析。
+	 * 根据当前配置类上是否存在 @Conditional 判断配置类是否需要解析，时判断依据是：
+	 * 1) 判断该配置类是否存在 @Conditional 注解，如果不存在该注解，表示这个配置类加载不需要条件，需要解析
+	 * 2) 如果存在 @Conditional 注解，表示这个配置类需要根据条件加载
+	 * 	具体判断依据为(下面三个常见的 case)：
+	 *   (1) @ConditionalOnBean：仅仅上下文中存在某个对象时，才会解析这个配置类
+	 *   (2) @ConditionalOnClass:某个class位于类路径上，才会解析这个配置类
+	 *   (3) @ConditionalOnWebApplication:当项目是Web应用时解析这个配置类
+	 * 在 spring-boot 判断一个配置类是否需要装配时，根据装配类上具体的 @Conditional 注解判断，如 @ConditionalOnClass(Dispatcher.class) 就是
+	 * 判断当前工程是否存在 Dispatcher 这个类，如果是 web 会导入 servlet 相关的依赖，就存在这个类，那么这个配置类就会被 spring 加载。
+	 */
 	public boolean shouldSkip(@Nullable AnnotatedTypeMetadata metadata, @Nullable ConfigurationPhase phase) {
+		// 判断是否有 @Conditional，没有表示该 Bean 注册不需要条件
 		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
 			return false;
 		}
@@ -91,8 +104,10 @@ class ConditionEvaluator {
 		}
 
 		List<Condition> conditions = new ArrayList<>();
+		// 拿到 @Conditional 中的 value
 		for (String[] conditionClasses : getConditionClasses(metadata)) {
 			for (String conditionClass : conditionClasses) {
+				// 实例化 value （OnBeanCondition、OnClassCondition、ProfileCondition 等）
 				Condition condition = getCondition(conditionClass, this.context.getClassLoader());
 				conditions.add(condition);
 			}
@@ -105,6 +120,7 @@ class ConditionEvaluator {
 			if (condition instanceof ConfigurationCondition) {
 				requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
 			}
+			// 判断是否匹配
 			if ((requiredPhase == null || requiredPhase == phase) && !condition.matches(this.context, metadata)) {
 				return true;
 			}

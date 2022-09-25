@@ -16,11 +16,19 @@
 
 package org.springframework.aop.framework;
 
+import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
+import org.springframework.beans.factory.BeanFactory;
+
 /**
  * Marker interface that indicates a bean that is part of Spring's
  * AOP infrastructure. In particular, this implies that any such bean
  * is not subject to auto-proxying, even if a pointcut would match.
- *
+ * 标记接口，表示这个 bean 是 Spring AOP 基础组件接口
+ * 实现这个接口的 bean 不受自动代理影响，即使它和切点匹配
+ * 对 Scope 代理对象 ScopedProxyFactoryBean，在给目标 Bean 生成代理对象时，给其设置了该接口，
+ * 表示生成的代理对象不会被 Spring 代理，即使它满足了切点
+ * @see org.springframework.aop.scope.ScopedProxyFactoryBean#setBeanFactory(BeanFactory)
+ * @see AbstractAutoProxyCreator#isInfrastructureClass(java.lang.Class)
  * @author Juergen Hoeller
  * @since 2.0.3
  * @see org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator

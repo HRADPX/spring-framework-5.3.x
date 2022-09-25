@@ -16,16 +16,18 @@
 
 package org.springframework.aop.aspectj.annotation;
 
+import org.springframework.aop.Advisor;
+import org.springframework.aop.aspectj.autoproxy.AspectJAwareAdvisorAutoProxyCreator;
+import org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator;
+import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-
-import org.springframework.aop.Advisor;
-import org.springframework.aop.aspectj.autoproxy.AspectJAwareAdvisorAutoProxyCreator;
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * {@link AspectJAwareAdvisorAutoProxyCreator} subclass that processes all AspectJ
@@ -89,11 +91,26 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 	@Override
 	protected List<Advisor> findCandidateAdvisors() {
 		// Add all the Spring advisors found according to superclass rules.
+		// 找出事务切面， AOP 也会进入这个方法，但是 advisors 中没有值
 		List<Advisor> advisors = super.findCandidateAdvisors();
+		/** 这里真正找出 AOP 切面， 并解析得到通知 */
+		// 这里的 aspectJAdvisorsBuilder 其实就是 beanFactory, this.aspectJAdvisorFactory 封装而成.
+		// 由于 AnnotationAwareAspectJAutoProxyCreator 实现了 BeanFactoryAware 接口，在属性填充后会
+		// 调用 initializeBean 方法，在这个方法中调用了 setBeanFactory 方法，在 setBeanFactory 方法中
+		// 调用 initBeanFactory 方法中实例化了这个对象
+		/**@see AbstractAutowireCapableBeanFactory#initializeBean()*/
+		/**@see AbstractAdvisorAutoProxyCreator#setBeanFactory()*/
 		// Build Advisors for all AspectJ aspects in the bean factory.
 		if (this.aspectJAdvisorsBuilder != null) {
 			advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
 		}
+		/**
+		 * todo huangran 确定 AOP 和事务
+		 *
+		 *   这里值得注意的是，事务找出的切面是没有缓存的，而 AOP 是进行缓存的，这是因为事务是找指定类型的 Advisor.class，
+		 * 而 AOP 是找所有的 Object.class，由此可见， AOP 寻找切面效率是很低的，所以 AOP 解析出来后将通知和切换名字存在
+		 * 一个 Map 中
+		 */
 		return advisors;
 	}
 

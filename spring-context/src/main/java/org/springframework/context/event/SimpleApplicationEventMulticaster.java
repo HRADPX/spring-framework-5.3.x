@@ -16,11 +16,8 @@
 
 package org.springframework.context.event;
 
-import java.util.concurrent.Executor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
@@ -28,6 +25,8 @@ import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ErrorHandler;
+
+import java.util.concurrent.Executor;
 
 /**
  * Simple implementation of the {@link ApplicationEventMulticaster} interface.
@@ -47,6 +46,12 @@ import org.springframework.util.ErrorHandler;
  * @author Stephane Nicoll
  * @author Brian Clozel
  * @see #setTaskExecutor
+ * 抽象事件多播器 {@link AbstractApplicationEventMulticaster} 的实现类，其作用是注册事件监听器和
+ * 广播相应的事件，即发布不同的事件，订阅了相应事件的监听器会回调监听器 {@link ApplicationListener}
+ * 接口中的方法，Spring 服务中很多组件的初始化都是依赖这种订阅发布机制完成的.
+ *
+ * Note: 默认情况下，事件监听器中的回调方法是在主线程中执行的，这可能有阻塞整个应用的风险，如果不想承担这个风险，
+ * 可以使用该类中的线程池 {@link SimpleApplicationEventMulticaster#taskExecutor }来执行监听器方法.
  */
 public class SimpleApplicationEventMulticaster extends AbstractApplicationEventMulticaster {
 

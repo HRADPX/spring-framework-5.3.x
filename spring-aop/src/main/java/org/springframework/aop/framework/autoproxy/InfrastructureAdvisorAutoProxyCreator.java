@@ -26,6 +26,8 @@ import org.springframework.lang.Nullable;
  *
  * @author Juergen Hoeller
  * @since 2.0.7
+ * 自动代理——不考虑应用级别的 Advisors，只考虑 Spring 内部的 Advisors.
+ * 	beanDefinition.getRole() == BeanDefinition.ROLE_INFRASTRUCTURE
  */
 @SuppressWarnings("serial")
 public class InfrastructureAdvisorAutoProxyCreator extends AbstractAdvisorAutoProxyCreator {

@@ -16,9 +16,6 @@
 
 package org.springframework.web.context.support;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
@@ -29,6 +26,9 @@ import org.springframework.jndi.JndiPropertySource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.context.ConfigurableWebEnvironment;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 
 /**
  * {@link Environment} implementation to be used by {@code Servlet}-based web
@@ -103,13 +103,22 @@ public class StandardServletEnvironment extends StandardEnvironment implements C
 	 * @see org.springframework.context.support.AbstractApplicationContext#initPropertySources
 	 * @see #initPropertySources(ServletContext, ServletConfig)
 	 */
+	/**
+	 * 在父类构造器中会调用这个方法，在完成构造方法调用后，环境有 4 个默认的 PropertySource，优先级由高到底依次为:
+	 * 1) servletConfigInitParams: servlet 配置参数
+	 * 2) servletContextInitParams: servlet 初始化参数
+	 * 3) systemProperties: JVM 环境变量
+	 * 4) systemEnvironment: 系统环境变量
+	 */
 	@Override
 	protected void customizePropertySources(MutablePropertySources propertySources) {
+		// 添加 "servletContextInitParams" 和 "servletConfigInitParams" 属性
 		propertySources.addLast(new StubPropertySource(SERVLET_CONFIG_PROPERTY_SOURCE_NAME));
 		propertySources.addLast(new StubPropertySource(SERVLET_CONTEXT_PROPERTY_SOURCE_NAME));
 		if (jndiPresent && JndiLocatorDelegate.isDefaultJndiEnvironmentAvailable()) {
 			propertySources.addLast(new JndiPropertySource(JNDI_PROPERTY_SOURCE_NAME));
 		}
+		// 父类中添加了 "systemEnvironment" 和 "systemProperties" 属性
 		super.customizePropertySources(propertySources);
 	}
 

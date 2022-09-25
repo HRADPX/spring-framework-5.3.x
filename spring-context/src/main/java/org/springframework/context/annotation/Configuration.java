@@ -16,16 +16,12 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
+
+import java.lang.annotation.*;
 
 /**
  * Indicates that a class declares one or more {@link Bean @Bean} methods and
@@ -402,6 +398,8 @@ import org.springframework.stereotype.Component;
  * annotations remaining undetected).
  * </ul>
  *
+ * 任何 @Configuration 的内部类必须是 static
+ * 任何 @Bean 方法注入的 Bean 不要是其他的 Configuration 类，因为 @Bean 方法的注入的类会仅会被当前普通的 Bean 处理
  * @author Rod Johnson
  * @author Chris Beams
  * @author Juergen Hoeller

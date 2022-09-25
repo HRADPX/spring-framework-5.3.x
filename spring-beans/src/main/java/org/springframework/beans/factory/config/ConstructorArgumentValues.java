@@ -16,20 +16,14 @@
 
 package org.springframework.beans.factory.config;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.BeanMetadataElement;
 import org.springframework.beans.Mergeable;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
+
+import java.util.*;
 
 /**
  * Holder for constructor argument values, typically as part of a bean definition.
@@ -355,7 +349,9 @@ public class ConstructorArgumentValues {
 			@Nullable String requiredName, @Nullable Set<ValueHolder> usedValueHolders) {
 
 		Assert.isTrue(index >= 0, "Index must not be negative");
+		// 从 indexedArgumentValues 获取指定类型和名字的参数， 一般不提供，这里返回 null
 		ValueHolder valueHolder = getIndexedArgumentValue(index, requiredType, requiredName);
+		// 如果是 null,再从 genericArgumentValues 中查找，一般不提供，这里返回 null
 		if (valueHolder == null) {
 			valueHolder = getGenericArgumentValue(requiredType, requiredName, usedValueHolders);
 		}

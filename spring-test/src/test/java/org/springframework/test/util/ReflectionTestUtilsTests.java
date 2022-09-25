@@ -353,11 +353,11 @@ class ReflectionTestUtilsTests {
 		assertThat(component.getNumber()).as("number should have been configured").isEqualTo(Integer.valueOf(42));
 		assertThat(component.getText()).as("text should have been configured").isEqualTo("enigma");
 
-		// Simulate @PostConstruct life-cycle event
+		// Simulate @PostConstruct com.hr.life-cycle event
 		invokeMethod(component, "init");
 		// assertions in init() should succeed
 
-		// Simulate @PreDestroy life-cycle event
+		// Simulate @PreDestroy com.hr.life-cycle event
 		invokeMethod(component, "destroy");
 		assertThat(component.getNumber()).as("number").isNull();
 		assertThat(component.getText()).as("text").isNull();

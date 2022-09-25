@@ -16,12 +16,11 @@
 
 package org.springframework.aop.support;
 
-import java.io.Serializable;
-
 import org.aopalliance.aop.Advice;
-
 import org.springframework.aop.Pointcut;
 import org.springframework.lang.Nullable;
+
+import java.io.Serializable;
 
 /**
  * Convenient Pointcut-driven Advisor implementation.
@@ -34,6 +33,8 @@ import org.springframework.lang.Nullable;
  * @author Juergen Hoeller
  * @see #setPointcut
  * @see #setAdvice
+ * Spring 通用 Advisor 的默认实现，它默认使用空的通知，和 TruePointcut 拦截所有方法，无需子类实现。
+ * 可以通过构造方法来传用户自定义的通知和切点。
  */
 @SuppressWarnings("serial")
 public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor implements Serializable {

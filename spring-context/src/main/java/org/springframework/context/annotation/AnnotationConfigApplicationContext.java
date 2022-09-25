@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Arrays;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -27,6 +24,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.metrics.StartupStep;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.Arrays;
+import java.util.function.Supplier;
 
 /**
  * Standalone application context, accepting <em>component classes</em> as input &mdash;
@@ -64,10 +64,25 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
+	/**
+	 * 初始化一个 Bean 的读取器和扫描器。
+	 * 默认的构造方法，如果直接调用这个默认的构造方法，需要在稍后通过调用
+	 * register() 方法去注册配置类，并调用 refresh() 方法刷新容器，触发
+	 * 容器对注解 Bean 的载入、解析和注册过程。
+	 */
 	public AnnotationConfigApplicationContext() {
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
+		// super() 首先是父类实例化，在父类实例化过程中，最重要的就是实例化了 BeanFactory，默认是 DefaultListableBeanFactory
+		// 后续所有的 beanFactory 都是这个对象。
+		// 实例化一个读取器，并向 BeanDefinitionMap 中注册了 5 个 BeanDefinition，这里为什么要注册这些 BeanDefinition，这是因为在 refreash 方法中
+		// Spring 初始化容器时会调用 invokeBeanFactoryPostProcessor 方法，这个方法委托了多个实现了 BeanFactoryPostProcessor 和
+		// BeanDefinitionRegistryPostProcessor 来做一些事，其中有 Spring 内部的，也有用户自定义的，而 Spring 内部的就是在这里注入的，其中
+		// ConfigurationClassPostProcessor 就是 Spring 内部的，这里将其注入是为了后续解析配置类。
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		createAnnotatedBeanDefReader.end();
+		// 实例化一个扫描器，它的作用是扫描一个类、包，将它们变成 BeanDefinition
+		// 从后面的源码可以看出，Spring 内部扫描包并不是用这个扫描器，而是自己 new 了一个 ClassPathBeanDefinitionScanner，这里的 scanner 仅仅
+		// 为了让程序员在外部调用 AnnotationConfigApplicationContext 对象的 scan 方法，这个方法的内部就是使用这个 scanner 来扫描的。
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -88,8 +103,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		// 调用无参构造，在父类的构造方法中实例化了默认的 BeanFactory，再调用自己的构造方法，
+		// 在自己的构造方法中实例化了一个读取器和扫描器。
 		this();
 		register(componentClasses);
+		// 初始化 Spring 环境，扫描出所有的 Bean，实例化所有非懒加载的单例 Bean，执行后置处理器
 		refresh();
 	}
 

@@ -16,17 +16,12 @@
 
 package org.springframework.scheduling.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+
+import java.lang.annotation.*;
 
 /**
  * Enables Spring's asynchronous method execution capability, similar to functionality
@@ -80,7 +75,6 @@ import org.springframework.core.Ordered;
  * in the application context bootstrap. If you need any dependencies on other beans
  * there, make sure to declare them 'lazy' as far as possible in order to let them
  * go through other post-processors as well.</b>
- *
  * <pre class="code">
  * &#064;Configuration
  * &#064;EnableAsync
@@ -146,6 +140,12 @@ import org.springframework.core.Ordered;
  * this case the {@code spring-aspects} module JAR must be present on the classpath, with
  * compile-time weaving or load-time weaving applying the aspect to the affected classes.
  * There is no proxy involved in such a scenario; local calls will be intercepted as well.
+ *
+ * 1) AsyncConfigurer 在 Spring 启动时前期就实例化，如果想要依赖其他的 Bean，确保它在依赖的 Bean 完成实例化后在进行实例化
+ * 可以通过 {@link org.springframework.context.annotation.Lazy} 或 {@link org.springframework.core.annotation.Order}
+ * 来控制实例化的时机.
+ * 2) 可以通过实现 AsyncConfigurer 接口来自定义异步执行的线程池和异常处理，如果没有提供，则 Spring 使用默认提供的线程池
+ * {@link org.springframework.core.task.SimpleAsyncTaskExecutor} 来执行异步任务
  *
  * @author Chris Beams
  * @author Juergen Hoeller

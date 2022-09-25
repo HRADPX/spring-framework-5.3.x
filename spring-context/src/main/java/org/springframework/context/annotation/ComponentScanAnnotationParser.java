@@ -16,11 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -34,6 +29,11 @@ import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * Parser for the @{@link ComponentScan} annotation.
  *
@@ -43,6 +43,7 @@ import org.springframework.util.StringUtils;
  * @since 3.1
  * @see ClassPathBeanDefinitionScanner#scan(String...)
  * @see ComponentScanBeanDefinitionParser
+ * 用于解析 @ComponentScan 注解
  */
 class ComponentScanAnnotationParser {
 
@@ -66,6 +67,8 @@ class ComponentScanAnnotationParser {
 
 
 	public Set<BeanDefinitionHolder> parse(AnnotationAttributes componentScan, String declaringClass) {
+		// 实例化了一个扫描器，这里可以看出，Spring 在扫描包时并没有使用 ScannedGenericBeanDefinition 中的 scanner属性(在构造方法中实例化的)
+		// 这里又重新实例化一个 scanner,这是因为 ScannedGenericBeanDefinition 中的 scanner 是给程序员外部扫描使用的。
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
@@ -74,6 +77,14 @@ class ComponentScanAnnotationParser {
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
 				BeanUtils.instantiateClass(generatorClass));
 
+		/**
+		 * @see https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#beans-factory-scopes-other-injection
+		 * 这里是全局处理，判断 Bean 是否需要被代理，一般在 web 应用中使用.
+		 * 在 @Scope 注解中同样有这个属性，用于将指定的 Bean 进行代理.
+		 * 原因：这是因为 Spring Ioc 容器不仅管理应用的对象(beans), 同样还维护对象之间的依赖.如果想将一个短生命周期的
+		 * Bean 注入到一个长生命周期的 Bean 中(将 HTTP request-bean 注入到一个 session-bean 中)，这是就需要一个代理
+		 * 的对象来代替这个短生命周期的 bean. 这个代理对象需要暴露和被替换 bean 相同的公共接口。
+ 		 */
 		ScopedProxyMode scopedProxyMode = componentScan.getEnum("scopedProxy");
 		if (scopedProxyMode != ScopedProxyMode.DEFAULT) {
 			scanner.setScopedProxyMode(scopedProxyMode);
@@ -85,6 +96,7 @@ class ComponentScanAnnotationParser {
 
 		scanner.setResourcePattern(componentScan.getString("resourcePattern"));
 
+		// 这是 includeFilter 需要扫描的
 		for (AnnotationAttributes includeFilterAttributes : componentScan.getAnnotationArray("includeFilters")) {
 			List<TypeFilter> typeFilters = TypeFilterUtils.createTypeFiltersFor(includeFilterAttributes, this.environment,
 					this.resourceLoader, this.registry);
@@ -92,6 +104,7 @@ class ComponentScanAnnotationParser {
 				scanner.addIncludeFilter(typeFilter);
 			}
 		}
+		// 这个是 excludeFilter 排除扫描的
 		for (AnnotationAttributes excludeFilterAttributes : componentScan.getAnnotationArray("excludeFilters")) {
 			List<TypeFilter> typeFilters = TypeFilterUtils.createTypeFiltersFor(excludeFilterAttributes, this.environment,
 				this.resourceLoader, this.registry);
@@ -100,12 +113,14 @@ class ComponentScanAnnotationParser {
 			}
 		}
 
+		// 这个是否是懒加载的
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
 		if (lazyInit) {
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
 
 		Set<String> basePackages = new LinkedHashSet<>();
+		// basePackagesArray 得到 basePackages 的值，它是一个数组
 		String[] basePackagesArray = componentScan.getStringArray("basePackages");
 		for (String pkg : basePackagesArray) {
 			String[] tokenized = StringUtils.tokenizeToStringArray(this.environment.resolvePlaceholders(pkg),
@@ -119,6 +134,7 @@ class ComponentScanAnnotationParser {
 			basePackages.add(ClassUtils.getPackageName(declaringClass));
 		}
 
+		// 给扫描器添加排除的类，即不扫描这些类
 		scanner.addExcludeFilter(new AbstractTypeHierarchyTraversingFilter(false, false) {
 			@Override
 			protected boolean matchClassName(String className) {

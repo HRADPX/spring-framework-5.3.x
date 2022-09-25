@@ -98,6 +98,12 @@ import java.lang.annotation.Target;
  * @see Qualifier
  * @see Value
  */
+/**
+ * todo huangran 这个注解的注释
+ * 这个注解可以用在构造方法上，用于指导 Spring 容器使用哪个构造方法来实例化 Bean，但是如果 Bean 只有一个带参的构造方法，
+ * 这个注解可以被省略. @since 4.3
+ * 如果有多个构造方法，并且没有 primary/default 构造方法，则至少有一个构造方法需要使用 @Autowire 注解。
+ */
 @Target({ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

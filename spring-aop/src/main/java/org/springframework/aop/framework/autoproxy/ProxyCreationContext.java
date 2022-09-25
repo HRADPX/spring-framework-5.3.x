@@ -30,6 +30,8 @@ import org.springframework.lang.Nullable;
 public final class ProxyCreationContext {
 
 	/** ThreadLocal holding the current proxied bean name during Advisor matching. */
+	// 在判断是否需要生成代理对象时，将当前的 beanName 存储到当前线程的 ThreadLocal 中，判断完成后移除.
+	/** @see AbstractAdvisorAutoProxyCreator#findAdvisorsThatCanApply */
 	private static final ThreadLocal<String> currentProxiedBeanName =
 			new NamedThreadLocal<>("Name of currently proxied bean");
 

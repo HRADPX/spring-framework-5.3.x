@@ -45,6 +45,11 @@ import java.lang.annotation.Target;
  *
  * @author Juergen Hoeller
  * @since 3.0
+ * 在 Spring 中如果一个 bean1 依赖另一个 bean2，那么可以简单地通过 @Autowired 注解（或者构造方法注入，亦或者是xml 方法方式）
+ * 将所需依赖地 bean2 注入到当前 bean1。
+ * 但是，有些 Bean 之间并没有直接地依赖，直接将其注入并不合适，比如需要触发类中的静态初始值设定项，例如用于数据库驱动程序注册，
+ * 使用 {@link DependsOn} 注解可以让其指定的 bean2 在 bean1 之前创建。
+ * Note: 这个注解在 SpringBot 自动装配中经常使用。
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

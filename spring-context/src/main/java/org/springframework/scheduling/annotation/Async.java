@@ -44,6 +44,9 @@ import java.lang.annotation.Target;
  * through: e.g. Spring's {@link AsyncResult}, EJB 3.1's {@link javax.ejb.AsyncResult},
  * or {@link java.util.concurrent.CompletableFuture#completedFuture(Object)}.
  *
+ * 1) 该注解可以用在类上，也可以用在方法上，但是不支持 @Configuration 类中的方法.
+ * 2) 方法的参数可以是任意的类型，但是返回值类型限制为 void 或 {@link java.util.concurrent.Future}
+ *
  * @author Juergen Hoeller
  * @author Chris Beams
  * @since 3.0

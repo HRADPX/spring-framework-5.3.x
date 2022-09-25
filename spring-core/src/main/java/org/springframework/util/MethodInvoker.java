@@ -16,11 +16,11 @@
 
 package org.springframework.util;
 
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import org.springframework.lang.Nullable;
 
 /**
  * Helper class that allows for specifying a method to invoke in a declarative
@@ -303,10 +303,20 @@ public class MethodInvoker {
 	 * @param paramTypes the parameter types to match
 	 * @param args the arguments to match
 	 * @return the accumulated weight for all arguments
+	 * 这个算法用于计算构造方法的参数类型和给定的参数的匹配程度（weight）.
+	 * 返回值越小，表示给定的参数和构造方法的参数类型越匹配，如果参数完全匹配，则返回 0.
+	 * 如果是给定的参数是参数类型的子类，由于继承体系， weight 会增加相应的继承层级数量
+	 * 例如，参数类型是 Object，给定的参数是 Integer，weight 会增加 2，因为 Integer 通过继承 Number，而 Number 继承 Object
+	 * 如果参数类型的 Number，给定的参数是 Integer， weight 会增加 1，因为 Integer 直接继承自 Number
+	 * 所以当给定一个参数类型为 Integer 的参数时，下面三个构造方法的优先级依次为：
+	 * 		Construct(Integer) > Construct(Number) > Construct(Object)
+	 * 如果参数类型是接口， weight 增加 1
+	 *
 	 */
 	public static int getTypeDifferenceWeight(Class<?>[] paramTypes, Object[] args) {
 		int result = 0;
 		for (int i = 0; i < paramTypes.length; i++) {
+			// 如果构造参数的类型和给定的不同，返回 Integer.MAX_VALUE，表示最不符合
 			if (!ClassUtils.isAssignableValue(paramTypes[i], args[i])) {
 				return Integer.MAX_VALUE;
 			}
@@ -314,6 +324,7 @@ public class MethodInvoker {
 				Class<?> paramType = paramTypes[i];
 				Class<?> superClass = args[i].getClass().getSuperclass();
 				while (superClass != null) {
+					// 如果是父类，result + 2，当前是子类
 					if (paramType.equals(superClass)) {
 						result = result + 2;
 						superClass = null;

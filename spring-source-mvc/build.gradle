@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+group 'org.springframework'
+version '5.3.15-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api(project(":spring-context"))
+    api(project(":spring-webmvc"))
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:8.5.78'
+    implementation 'com.alibaba:fastjson:1.2.26'
+    compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'com.google.guava:guava:31.0.1-jre'
+//    testCompile group: 'junit', name: 'junit', version: '4.12'
+}

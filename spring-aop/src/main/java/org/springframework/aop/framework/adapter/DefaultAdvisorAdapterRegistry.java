@@ -16,15 +16,14 @@
 
 package org.springframework.aop.framework.adapter;
 
+import org.aopalliance.aop.Advice;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.springframework.aop.Advisor;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.aopalliance.aop.Advice;
-import org.aopalliance.intercept.MethodInterceptor;
-
-import org.springframework.aop.Advisor;
-import org.springframework.aop.support.DefaultPointcutAdvisor;
 
 /**
  * Default implementation of the {@link AdvisorAdapterRegistry} interface.
@@ -75,13 +74,24 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 		throw new UnknownAdviceTypeException(advice);
 	}
 
+	/**
+	 * 将通知转换为 MethodInterceptor，这里使用了适配器模式
+	 * 其中，后置通知(@After)、环绕通知(@Around)、异常通知(@AfterThrowing) 是直接实现 MethodInterceptor 接口
+	 * 而前置通知(@Before)、最终通知(@AfterReturning) 没有直接实现该接口，需要通知适配器进行转换
+	 */
 	@Override
 	public MethodInterceptor[] getInterceptors(Advisor advisor) throws UnknownAdviceTypeException {
 		List<MethodInterceptor> interceptors = new ArrayList<>(3);
 		Advice advice = advisor.getAdvice();
+		// 是否是 MethodInterceptor
 		if (advice instanceof MethodInterceptor) {
 			interceptors.add((MethodInterceptor) advice);
 		}
+		// 在实例化 AnnotationAwareAspectJAutoCreator 时向 adapters 添加了 3 个拦截器适配器
+		// 分别是 MethodBeforeAdviceAdapter、AfterReturningAdviceAdapter、ThrowsAdviceAdapter
+		// 在解析切面时，通过通知类型生成对应的 Advice，并封装到 PointcutAdvisor(InstantiationModelAwarePointcutAdvisorImpl) 中
+		/** @see org.springframework.aop.aspectj.annotation.ReflectiveAspectJAdvisorFactory#getAdvisor*/
+		// 通知适配器将 Advisor 转换为 MethodInterceptor
 		for (AdvisorAdapter adapter : this.adapters) {
 			if (adapter.supportsAdvice(advice)) {
 				interceptors.add(adapter.getInterceptor(advisor));

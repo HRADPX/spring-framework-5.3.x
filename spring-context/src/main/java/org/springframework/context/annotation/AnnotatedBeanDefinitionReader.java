@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Annotation;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
@@ -32,6 +29,9 @@ import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
+import java.util.function.Supplier;
 
 /**
  * Convenient adapter for programmatic registration of bean classes.
@@ -67,6 +67,20 @@ public class AnnotatedBeanDefinitionReader {
 	 * @see #AnnotatedBeanDefinitionReader(BeanDefinitionRegistry, Environment)
 	 * @see #setEnvironment(Environment)
 	 */
+	/**
+	 * 	这里的 BeanDefinitionRegistry registry 是通过在 AnnotationConfigApplicationContext
+	 * 的构造方法中传进来的 this。
+	 * 	由此可以看出 AnnotationConfigApplicationContext 是一个 BeanDefinitionRegistry 类型的
+	 * 的类，从它的继承体系可以证明这个观点。
+	 * 		public class GenericApplicationContext
+	 * 			extends AbstractApplicationContext
+	 * 			implements BeanDefinitionRegistry {
+	 * 	这是它的父类，可以看到它的父类实现了 BeanDefinitionRegistry。
+	 * 	AnnotationBeanDefinitionRegistry 这个类的作用可以从名字看出，
+	 * 	它的作用是注册 BeanDefinition。BeanDefinition 又是什么，它实际
+	 * 	上是用来描述 Spring 中的 Bean，具体看 BeanDefinition 接口源码注释。
+	 * @see BeanDefinition
+	 */
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry) {
 		this(registry, getOrCreateEnvironment(registry));
 	}
@@ -84,7 +98,9 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		// 这个属性是用于解析 @Conditional 注解的，常见在 SpringBoot 自动装配和 @Profile 中应用
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		// 向容器中注入了所有和注解相关的后置处理器
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -256,6 +272,8 @@ public class AnnotatedBeanDefinitionReader {
 		}
 
 		abd.setInstanceSupplier(supplier);
+		// @Scope 注解
+		// todo huangran 看下这个注解代理的实现
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
 		abd.setScope(scopeMetadata.getScopeName());
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));

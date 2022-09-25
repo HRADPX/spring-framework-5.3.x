@@ -7,13 +7,20 @@ public class User {
 	}
 
 	public User(int id, String name) {
+		this(id, name, false);
+	}
+
+	public User(int id, String name, boolean exception) {
 		this.id = id;
 		this.name = name;
+		this.exception = exception;
 	}
 
 	private int id;
 
 	private String name;
+
+	private boolean exception;
 
 	public int getId() {
 		return id;
@@ -29,6 +36,14 @@ public class User {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public boolean isException() {
+		return exception;
+	}
+
+	public void setException(boolean exception) {
+		this.exception = exception;
 	}
 
 	@Override

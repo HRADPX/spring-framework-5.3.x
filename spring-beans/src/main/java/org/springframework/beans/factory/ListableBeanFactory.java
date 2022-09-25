@@ -16,12 +16,12 @@
 
 package org.springframework.beans.factory;
 
-import java.lang.annotation.Annotation;
-import java.util.Map;
-
 import org.springframework.beans.BeansException;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
+
+import java.lang.annotation.Annotation;
+import java.util.Map;
 
 /**
  * Extension of the {@link BeanFactory} interface to be implemented by bean factories
@@ -244,6 +244,10 @@ public interface ListableBeanFactory extends BeanFactory {
 	 * the given object type (including subclasses), or an empty array if none
 	 * @see FactoryBean#getObjectType
 	 * @see BeanFactoryUtils#beanNamesForTypeIncludingAncestors(ListableBeanFactory, Class, boolean, boolean)
+	 * 根据给定的 Class 类型返回符合该类型的 Bean（包含子类） 的名字，如果 type 为 null，返回所有的 beanName
+	 * @param includeNonSingletons 是否包含非单例的 beanDefinition
+	 * @param allowEagerInit 在类型判断时是否实例化非懒加载的单例 bean 和 FactoryBean 的代表的类型
+	 * @return 返回符合给定类型的所有 beanName，
 	 */
 	String[] getBeanNamesForType(@Nullable Class<?> type, boolean includeNonSingletons, boolean allowEagerInit);
 

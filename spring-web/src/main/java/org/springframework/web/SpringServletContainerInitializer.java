@@ -16,21 +16,16 @@
 
 package org.springframework.web;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.Set;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ReflectionUtils;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HandlesTypes;
-
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import org.springframework.lang.Nullable;
-import org.springframework.util.ReflectionUtils;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 /**
  * Servlet 3.0 {@link ServletContainerInitializer} designed to support code-based
@@ -109,6 +104,11 @@ import org.springframework.util.ReflectionUtils;
  * @since 3.1
  * @see #onStartup(Set, ServletContext)
  * @see WebApplicationInitializer
+ * 基于 servlet 3.0 规范，会在容器启动时，通过 SPI 扩展机制自动扫描所有 jar 包下的
+ * META-INF/services/javax.servlet.ServletContainerInitializer 文件中指定的全路径的类，并
+ * 实例化该类，然后回调该类的 onStartUp 方法，spring-web 包下的该文件的类就是 SpringServletContainerInitializer,
+ * @see spring-web/src/main/resources/META-INF/services/javax.servlet.ServletContainerInitializer
+ * 这个类的 onStartUp 方法会探测所有 WebApplicationInitializer 实现类，完成像 servlets、filters、listeners 的注入
  */
 @HandlesTypes(WebApplicationInitializer.class)
 public class SpringServletContainerInitializer implements ServletContainerInitializer {
@@ -138,6 +138,7 @@ public class SpringServletContainerInitializer implements ServletContainerInitia
 	 * @param servletContext the servlet context to be initialized
 	 * @see WebApplicationInitializer#onStartup(ServletContext)
 	 * @see AnnotationAwareOrderComparator
+	 * 在 servlet 容器启动时会自动探测 WebApplicationInitializer 接口，执行 onStartUp 方法。
 	 */
 	@Override
 	public void onStartup(@Nullable Set<Class<?>> webAppInitializerClasses, ServletContext servletContext)

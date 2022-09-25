@@ -16,14 +16,10 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.beans.factory.support.BeanDefinitionReader;
 import org.springframework.core.annotation.AliasFor;
+
+import java.lang.annotation.*;
 
 /**
  * Indicates one or more resources containing bean definitions to import.
@@ -35,7 +31,7 @@ import org.springframework.core.annotation.AliasFor;
  * as namespaces is still necessary.
  *
  * <p>By default, arguments to the {@link #value} attribute will be processed using a
- * {@link org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader GroovyBeanDefinitionReader}
+ * {@link org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader yBeanDefinitionReader}
  * if ending in {@code ".groovy"}; otherwise, an
  * {@link org.springframework.beans.factory.xml.XmlBeanDefinitionReader XmlBeanDefinitionReader}
  * will be used to parse Spring {@code <beans/>} XML files. Optionally, the {@link #reader}

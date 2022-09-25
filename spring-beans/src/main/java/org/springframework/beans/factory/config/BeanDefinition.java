@@ -37,6 +37,12 @@ import org.springframework.lang.Nullable;
  * @see ConfigurableListableBeanFactory#getBeanDefinition
  * @see org.springframework.beans.factory.support.RootBeanDefinition
  * @see org.springframework.beans.factory.support.ChildBeanDefinition
+ *   BeanDefinition 在 Spring 中用于描述 Bean 的接口，和 Class 用于描述 Java 中的类相似，
+ * 这个类描述了 Bean 的各种属性，如是否是懒加载、Bean 的作用域（单例或原型）， Bean 的名字，
+ * isPrimary 属性等。
+ *
+ *  它和 Class 相似都是用来描述 Java 对象，但是 Class 不足以描述 Spring 管理的 Bean,
+ * 所以 Spring 它自己实现了一个类来描述 Bean
  */
 public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 
@@ -46,6 +52,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * @see #setScope
 	 * @see ConfigurableBeanFactory#SCOPE_SINGLETON
 	 */
+	// 单例标识符
 	String SCOPE_SINGLETON = ConfigurableBeanFactory.SCOPE_SINGLETON;
 
 	/**
@@ -54,12 +61,14 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * @see #setScope
 	 * @see ConfigurableBeanFactory#SCOPE_PROTOTYPE
 	 */
+	// 多例标识符
 	String SCOPE_PROTOTYPE = ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
 
 	/**
 	 * Role hint indicating that a {@code BeanDefinition} is a major part
 	 * of the application. Typically corresponds to a user-defined bean.
+	 * 标识这个 bean 是用户定义的，优先级最低
 	 */
 	int ROLE_APPLICATION = 0;
 
@@ -79,6 +88,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * entirely background role and has no relevance to the end-user. This hint is
 	 * used when registering beans that are completely part of the internal workings
 	 * of a {@link org.springframework.beans.factory.parsing.ComponentDefinition}.
+	 * 标识这个 bean 是一个后台角色，即无相关使用方，仅 Spring 内部使用
 	 */
 	int ROLE_INFRASTRUCTURE = 2;
 

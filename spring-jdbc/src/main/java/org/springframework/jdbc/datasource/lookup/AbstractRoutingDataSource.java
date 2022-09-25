@@ -16,23 +16,28 @@
 
 package org.springframework.jdbc.datasource.lookup;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Collections;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jdbc.datasource.AbstractDataSource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Map;
+
 /**
  * Abstract {@link javax.sql.DataSource} implementation that routes {@link #getConnection()}
  * calls to one of various target DataSources based on a lookup key. The latter is usually
  * (but not necessarily) determined through some thread-bound transaction context.
+ *
+ * {@link DataSource} 路由的抽象类，在实际工程中，可能有不止一种数据源，那么 {@link DataSource} 常用的实现类
+ * {@link org.springframework.jdbc.datasource.DriverManagerDataSource} 不能满足要求，那么这时就可以实现该抽象类，该类中的
+ * {@link #resolvedDataSources} 可以保存多个数据源，该类只有一个抽象方法 {@link #determineCurrentLookupKey()}，在获取数据源
+ * 时，需要根据这个方法返回的 key 来决定使用哪个数据源.
+ * KsBoot 的数据源就是通过实现该抽象类，并通过 AOP 来完成多数据源管理和单数据源的事务，并使用一个队列来管理这些数据源的 key.
  *
  * @author Juergen Hoeller
  * @since 2.0.1
