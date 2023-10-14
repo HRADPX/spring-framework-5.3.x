@@ -20,7 +20,7 @@ public class TxTest {
 				new AnnotationConfigApplicationContext(ApplicationTxConfiguration.class);
 		// 注解事务
 		UserTxService userTxService = configApplicationContext.getBean(UserTxService.class);
-		userTxService.execute(Collections.singletonList(new User(1, "transactionEvent", true)));
+		userTxService.execute(Collections.singletonList(new User(1, "transactionEvent33", true)));
 //		List<User> users = userTxService.queryByIds(Arrays.asList(1, 24));
 //		System.out.println(users);
 

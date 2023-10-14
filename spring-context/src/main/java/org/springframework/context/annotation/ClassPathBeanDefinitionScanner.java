@@ -274,7 +274,9 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		for (String basePackage : basePackages) {
 			// 扫描 basePackage 路径下所有的 java 文件
 			// 并将它们转换成 BeanDefinition 类型放在 Set 集合中。Spring 通过包扫描得到的
-			// BeanDefinition 都是 ScannedGenericBeanDefinition，且实现了 AnnotationBeanDefinition
+			// BeanDefinition 都是 ScannedGenericBeanDefinition，
+			// 且实现了 AnnotationBeanDefinition.
+			// 而 Spring 内部注册的 Bean 一般都是 RootBeanDefinition
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
 				// 获取该 BeanDefinition 的 Scope 属性并设置，
@@ -292,6 +294,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 					// 处理通用注解信息，如 Lazy、DependOn、Primary等注解
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				// 检验当前的 beanDefinition 是否已经存在，如果存在判断是否与已经存在的相适应
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					// 判断是否需要被代理，如果当前 bean 需要被代理，则会在 Spring 生命周期方法 initializedBean 中的 Aware 方法

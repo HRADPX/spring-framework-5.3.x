@@ -240,7 +240,7 @@ class ConfigurationClassParser {
 		// Recursively process the configuration class and its superclass hierarchy.
 		SourceClass sourceClass = asSourceClass(configClass, filter);
 		do {
-			// 解析配置类
+			// 解析配置类，解释下这里为什么要用循环，比如有父类，那么子类解析完成后需要对父类进行解析
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass, filter);
 		}
 		while (sourceClass != null);
@@ -283,6 +283,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
+		// doProcessConfigurationClass()_1
 		// 处理 @ComponentScan 注解，这里会得到这里注解的所有内容，
 		// 包括 value(basePackage)、includeFilters、excludeFilters 等所有信息。
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
@@ -296,7 +297,14 @@ class ConfigurationClassParser {
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
-				/** 这里是判断扫描出来的 beanDefinition 是否是 config class， 如果是，递归解析 */
+				/**
+				 * 这里是判断扫描出来的 bean 进行递归解析，为什么扫描出来的 bean 还有解析？
+				 * 这是因为我们除了在 Configuration class 上使用 @ComponentScan 注解，在
+				 * 扫描包下的 Bean（即有 @Component 注解）上同样使用  @ComponentScan 注解，
+				 * 同时，也可能也是一个 @ConfigurationClass，亦或使用 @Import 注解来向 Spring
+				 * 注册一个类，所以这里需要对每个扫描出来的 Bean 再解析一次，递归调用，方法和
+				 * 前面的一样，这里就不分析了。
+				 */
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {
@@ -313,6 +321,7 @@ class ConfigurationClassParser {
 		 * 上面的代码已经完成了普通类的扫描，并且生成对应的 beanDefinition，注册到了 beanDefinitionMap 中，
 		 */
 		// Process any @Import annotations
+		// doProcessConfigurationClass()_2
 		/**
 		 * 这里处理 @Import 注解，判断当前的 BeanDefinition 是否存在 @Import 注解，这个注解是 Spring 扩展融合其他组件的关键注解，
 		 * 该注解的作用可以向 Spring 容器中注入一个 class，这里会把这个类传进去解析， Spring 将 @Import 导入的类分为以下 3 种情况：

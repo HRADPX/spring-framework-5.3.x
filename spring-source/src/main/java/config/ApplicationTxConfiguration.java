@@ -6,7 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.interceptor.TransactionAttributeSource;
 
 import javax.sql.DataSource;
 
@@ -19,7 +21,7 @@ import javax.sql.DataSource;
  */
 @Configuration
 @ComponentScan(basePackages = {"com.hr.tx", "com.hr.aspect"})
-@EnableTransactionManagement(proxyTargetClass = true)
+@EnableTransactionManagement
 //@EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 public class ApplicationTxConfiguration {
 	@Bean
@@ -39,5 +41,11 @@ public class ApplicationTxConfiguration {
 	@Bean
 	public DataSourceTransactionManager transactionManager() {
 		return new DataSourceTransactionManager(dataSource());
+	}
+
+
+	@Bean
+	public TransactionAttributeSource transactionAttributeSource() {
+		return new AnnotationTransactionAttributeSource(false);
 	}
 }

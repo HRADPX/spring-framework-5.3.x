@@ -30,7 +30,10 @@ public class ProxyFactoryBeanText {
 		proxyFactory.addAdvice(new DebugInterceptor());
 		proxyFactory.addAdvisor(new ProxyAdvisor());
 		ProxyInterface proxyInterface = (ProxyInterface) proxyFactory.getProxy();
+
 		proxyInterface.execute("proxyFactory");
+		DebugInterceptor interceptor = (DebugInterceptor) proxyFactory.getProxy();
+		System.out.println(interceptor.getCount());
 	}
 
 }

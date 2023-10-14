@@ -720,7 +720,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Register default environment beans.
-		// 注册默认的系统的配置和系统环境配置
+		// 注册默认的容器环境
+		// Spring StandardEnvironment 配置两种 propertySource,
+		// 即 JVM System properties(System.getProperties()) 和 System environment properties(System.getenv())
+		// 在 Web 环境下， StandardServletEnvironment 配置额外两种， Servlet Config 和 Servlet Context
+		// 默认情况下，系统变量（System properties）优先于环境变量（environment variables），如果在 Web 环境下，
+		// 多个 propertySource 的优先级从高到底依次为：
+		// 1）ServletConfig parameters
+		// 2）ServletContext parameters
+		// 3）JVM system properties（命令行参数）
+		// 4）JVM system environment（操作系统环境变量）
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
 		}

@@ -54,8 +54,8 @@ public class UserTxService {
 
 
 	@Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
-	public void updateUser(User user, boolean isException) {
-		applicationEventPublisher.publishEvent(new TransactionUserEvent(user, user.getId()));
+	private void updateUser(User user, boolean isException) {
+//		applicationEventPublisher.publishEvent(new TransactionUserEvent(user, user.getId()));
 		userMapper.updateModel(user, isException);
 	}
 
@@ -71,10 +71,10 @@ public class UserTxService {
 			try {
 				((UserTxService) AopContext.currentProxy()).updateUser(user, user.isException());
 			} catch (Exception e) {
-				System.out.println("catching exception.........");
+				System.out.println("catching exception........." + e);
 			}
 			// 事务完成提交后发布一个事件
-			applicationEventPublisher.publishEvent(new TransactionUserEvent(user, user.getId()));
+//			applicationEventPublisher.publishEvent(new TransactionUserEvent(user, user.getId()));
 		});
 
 	}

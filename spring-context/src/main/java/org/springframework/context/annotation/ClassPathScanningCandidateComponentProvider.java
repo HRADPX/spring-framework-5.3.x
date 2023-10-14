@@ -420,13 +420,16 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				}
 				try {
 					MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
-					// 过滤逻辑，判断扫描出来的是否需要被 Spring 管理，如没有加 @Component 注解的，被 exclude 属性排除的
+					// 过滤逻辑，判断扫描出来的是否需要被 Spring 管理，
+					// 如没有加 @Component 注解的，被 exclude 属性排除的
+					// 过滤逻辑见下解析
 					if (isCandidateComponent(metadataReader)) {
 						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 						sbd.setSource(resource);
-						// 判断是否当前类是否可被实例化，如接口和抽象类就不可被实例化，故需要被排除
-						// 这里需要注意如果抽象类中存在 @LookUp 注解修饰的方法，这个类也会被实例化，在运行过程中 Spring 会
-						// 通过 CGLIB 生成代理类 @see com.hr.lookup.LookUpManager
+						// 判断是否当前类是否可被实例化，如接口和抽象类就不可被实例化，故需要被排除，
+						// 这个方法比较简单，就不分析了。
+						// 但是需要注意如果抽象类中存在 @LookUp 注解修饰的方法，这个类也会被实例化，
+						// 在运行过程中 Spring 会通过 CGLIB 生成代理类，是个特例，后续会分析，先pass
 						if (isCandidateComponent(sbd)) {
 							if (debugEnabled) {
 								logger.debug("Identified candidate component class: " + resource);
@@ -480,6 +483,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * and does match at least one include filter.
 	 * @param metadataReader the ASM ClassReader for the class
 	 * @return whether the class qualifies as a candidate component
+	 */
+	/**
+	 * 过滤逻辑
+	 * 这里需要注意，includeFilters 包含了几个注解，如 @Component、@Named、@ManagedBean
+	 * 这个都是在上面 parse 方法中实例化扫描器 ClassPathBeanDefinitionScanner
+	 * 构造方法中的 registerDefaultFilters() 方法中添加的。
+	 * 这里也可以通过覆盖这种默认的操作，例如 spring-mybatis 就是默认将 @MapperScan
+	 * 要扫描的所有 mapper 都注册到容器中
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
 		// 是否在排除的集合中
