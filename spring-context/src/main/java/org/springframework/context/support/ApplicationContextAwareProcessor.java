@@ -59,6 +59,9 @@ import org.springframework.util.StringValueResolver;
  * @see org.springframework.context.MessageSourceAware
  * @see org.springframework.context.ApplicationContextAware
  * @see org.springframework.context.support.AbstractApplicationContext#refresh()
+ *
+ * 在刷新容器前准备阶段，向容器中添加这个 {@link BeanPostProcessor}
+ * @see AbstractApplicationContext#prepareBeanFactory(org.springframework.beans.factory.config.ConfigurableListableBeanFactory)
  */
 class ApplicationContextAwareProcessor implements BeanPostProcessor {
 

@@ -16,9 +16,38 @@
 
 package org.springframework.beans.factory.support;
 
+import java.beans.ConstructorProperties;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
-import org.springframework.beans.*;
-import org.springframework.beans.factory.*;
+import org.springframework.beans.BeanMetadataElement;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.TypeConverter;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.BeanDefinitionStoreException;
+import org.springframework.beans.factory.InjectionPoint;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
+import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder;
@@ -28,13 +57,12 @@ import org.springframework.core.MethodParameter;
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.lang.Nullable;
-import org.springframework.util.*;
-
-import java.beans.ConstructorProperties;
-import java.lang.reflect.*;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.*;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.MethodInvoker;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * Delegate for resolving constructors and factory methods.
@@ -95,6 +123,11 @@ class ConstructorResolver {
 	 * or {@code null} if none (-> use constructor argument values from bean definition)
 	 * @return a BeanWrapper for the new instance
 	 * Spring Ioc 容器启动实例化 Bean 时， explicitArgs = null
+	 *
+	 * 参数 chosenCtors 不为空的场景有三个：
+	 * 1）有一个 @Autowired(required = true) 的构造器
+	 * 2）有一个或多个 @Autowired(required = false) 的构造器
+	 * 3）只有一个带参的普通构造器
 	 */
 	public BeanWrapper autowireConstructor(String beanName, RootBeanDefinition mbd,
 			@Nullable Constructor<?>[] chosenCtors, @Nullable Object[] explicitArgs) {
@@ -136,6 +169,10 @@ class ConstructorResolver {
 		// 第一次解析
 		if (constructorToUse == null || argsToUse == null) {
 			// Take specified constructors, if any.
+			// 是否有可用的，通过参数传递，只有三种情况有值：
+			//	1）有一个 @Autowired(required = true) 的构造器
+			//	2）有一个或多个 @Autowired(required = false) 的构造器
+			//	3）只有一个带参的普通构造器
 			Constructor<?>[] candidates = chosenCtors;
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
@@ -151,7 +188,7 @@ class ConstructorResolver {
 				}
 			}
 
-			// 如果只有一个无参构造器
+			// 1）如果只有一个无参构造器
 			if (candidates.length == 1 && explicitArgs == null && !mbd.hasConstructorArgumentValues()) {
 				Constructor<?> uniqueCandidate = candidates[0];
 				if (uniqueCandidate.getParameterCount() == 0) {
@@ -168,16 +205,19 @@ class ConstructorResolver {
 			}
 
 			// Need to resolve the constructor.
-			// 需要解析使用哪个构造器
+			// 2）需要解析使用哪个构造器
+			// 判断是否是自动注入的
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
 
 			// 最小的参数个数
 			int minNrOfArgs;
+			// 需要明确的参数个数，通过方法传递过来的，例如 applicationContext.getBean(beanName, args)
 			if (explicitArgs != null) {
 				minNrOfArgs = explicitArgs.length;
 			}
+			// 没有明确的参数个数，需要推断参数个数
 			else {
 				// 获取构造方法的参数，如 MyBatis 就使用了 mbd.getConstructorArgumentValues().
 				// addGenericArgumentValue() 方法向构造方法中添加参数，这里的方法就可以获取到这些参数。
@@ -239,7 +279,7 @@ class ConstructorResolver {
 				Class<?>[] paramTypes = candidate.getParameterTypes();
 				if (resolvedValues != null) {
 					try {
-						// 判断是否加了 ConstructorProperties 注解，如果加了则把值取出
+						// 判断是否加了 ConstructorProperties 注解，如果加了则把值取出，很少使用
 						String[] paramNames = ConstructorPropertiesChecker.evaluate(candidate, parameterCount);
 						if (paramNames == null) {
 							ParameterNameDiscoverer pnd = this.beanFactory.getParameterNameDiscoverer();
@@ -319,6 +359,7 @@ class ConstructorResolver {
 						"Could not resolve matching constructor on bean class [" + mbd.getBeanClassName() + "] " +
 						"(hint: specify index/type/name arguments for simple parameters to avoid type ambiguities)");
 			}
+			// 找到多个差异值相同的，且不是宽松模式，抛异常
 			else if (ambiguousConstructors != null && !mbd.isLenientConstructorResolution()) {
 				throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 						"Ambiguous constructor matches found on bean class [" + mbd.getBeanClassName() + "] " +
@@ -813,6 +854,7 @@ class ConstructorResolver {
 			// Try to find matching constructor argument value, either indexed or generic.
 			ConstructorArgumentValues.ValueHolder valueHolder = null;
 			if (resolvedValues != null) {
+				// 先从 BeanDefinition 中获取
 				valueHolder = resolvedValues.getArgumentValue(paramIndex, paramType, paramName, usedValueHolders);
 				// If we couldn't find a direct match and are not supposed to autowire,
 				// let's try the next generic, untyped argument value as fallback:
@@ -857,6 +899,7 @@ class ConstructorResolver {
 				MethodParameter methodParam = MethodParameter.forExecutable(executable, paramIndex);
 				// No explicit match found: we're either supposed to autowire or
 				// have to fail creating an argument array for the given constructor.
+				// 是否支持自动注入，如果参数不足，Spring 在自动注入模式下会把不足的参数找全，反之抛异常
 				if (!autowiring) {
 					throw new UnsatisfiedDependencyException(
 							mbd.getResourceDescription(), beanName, new InjectionPoint(methodParam),

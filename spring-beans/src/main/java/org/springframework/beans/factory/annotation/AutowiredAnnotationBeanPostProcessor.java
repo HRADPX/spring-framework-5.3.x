@@ -16,13 +16,37 @@
 
 package org.springframework.beans.factory.annotation;
 
+import java.beans.PropertyDescriptor;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.TypeConverter;
-import org.springframework.beans.factory.*;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.BeanFactoryUtils;
+import org.springframework.beans.factory.InjectionPoint;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
@@ -42,12 +66,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
-
-import java.beans.PropertyDescriptor;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor BeanPostProcessor}
@@ -297,6 +315,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 					}
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
+					// 有 Autowired 注解并且 required 属性为 true 的构造器
 					Constructor<?> requiredConstructor = null;
 					// 默认构造器
 					Constructor<?> defaultConstructor = null;
@@ -314,9 +333,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 							continue;
 						}
 						// 如果构造方法上存在 @Autowired 注解，这里会将属性 required 和属性值 ture 封装成一个 AnnotationAttributes 对象
-						// todo huangran 验证 @Autowired 修饰的构造方法
 						MergedAnnotation<?> ann = findAutowiredAnnotation(candidate);
+						// 没有 @Autowired 注解的构造器
 						if (ann == null) {
+							// 没有，从父类上找，这种情况很少见
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
 							if (userClass != beanClass) {
 								try {
@@ -329,33 +349,46 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 								}
 							}
 						}
+						// 有 @Autowired 注解的构造器
 						if (ann != null) {
+							// 有且只能有一个 @Autowired(required = true) 注解的构造器
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
 										". Found constructor with 'required' Autowired annotation already: " +
 										requiredConstructor);
 							}
+							// 判断是否 required 是否为 true
 							boolean required = determineRequiredStatus(ann);
 							if (required) {
+								// 如果有 @Autowired(required = true)，有且只能有一个 @Autowired 注解
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
 											". Found constructor with 'required' Autowired annotation: " +
 											candidate);
 								}
+								// 找到了 @Autowired(required = true) 的构造器
 								requiredConstructor = candidate;
 							}
+							// 添加到集合中
 							candidates.add(candidate);
 						}
 						else if (candidate.getParameterCount() == 0) {
+							// 默认构造器
 							defaultConstructor = candidate;
 						}
 					}
+					// 不为空，表示有 @Autowired 注解的构造器
+					// 这里不为空，只有两种情况：
+					// （1）只有一个 @Autowired(required = true) 的构造器
+					// （2）有一个或多个 @Autowired(required = false) 的构造器
 					if (!candidates.isEmpty()) {
 						// Add default constructor to list of optional constructors, as fallback.
+						// 没有  @Autowired(required = true) 的构造器，且有默认无参构造
 						if (requiredConstructor == null) {
 							if (defaultConstructor != null) {
+								// 将无参构造也添加到集合中
 								candidates.add(defaultConstructor);
 							}
 							else if (candidates.size() == 1 && logger.isInfoEnabled()) {
@@ -367,7 +400,11 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 						}
 						candidateConstructors = candidates.toArray(new Constructor<?>[0]);
 					}
-					// 只有一个构造方法，且有参数
+					// 上面的候选集合（candidates）为空才会进入这个分支。
+					// 对应的是类只有一个有参数且没有 @Autowired 注解的构造器，这里 Spring 也会将其加到候选集合中。
+					// 为什么 Spring 要这么做？因为一个类如果只有一个带有参数的构造器，不管是否加了 @Autowired 注解，
+					// 这个类只有这一种实例化方式，也只能用这个构造器，所以 Spring 就认为找到了，并且后续会用它来进行实例化对象，
+					// 这也是如果一个 Bean 只有一个带参构造，不用 @Autowired 注解也能进行参数注入的原因。
 					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterCount() > 0) {
 						candidateConstructors = new Constructor<?>[] {rawCandidates[0]};
 					}
@@ -378,6 +415,7 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 					else if (nonSyntheticConstructors == 1 && primaryConstructor != null) {
 						candidateConstructors = new Constructor<?>[] {primaryConstructor};
 					}
+					// 候选集合为空，且没有带参构造器，对应的是类只有无参构造器的场景
 					else {
 						candidateConstructors = new Constructor<?>[0];
 					}

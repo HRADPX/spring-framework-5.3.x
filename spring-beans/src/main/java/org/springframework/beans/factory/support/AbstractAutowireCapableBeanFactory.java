@@ -16,15 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import org.apache.commons.logging.Log;
-import org.springframework.beans.*;
-import org.springframework.beans.factory.*;
-import org.springframework.beans.factory.config.*;
-import org.springframework.core.*;
-import org.springframework.lang.Nullable;
-import org.springframework.util.*;
-import org.springframework.util.ReflectionUtils.MethodCallback;
-
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -34,10 +25,64 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
+
+import org.apache.commons.logging.Log;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyAccessorUtils;
+import org.springframework.beans.PropertyValue;
+import org.springframework.beans.PropertyValues;
+import org.springframework.beans.TypeConverter;
+import org.springframework.beans.factory.Aware;
+import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.BeanCurrentlyInCreationException;
+import org.springframework.beans.factory.BeanDefinitionStoreException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.InjectionPoint;
+import org.springframework.beans.factory.UnsatisfiedDependencyException;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.beans.factory.config.AutowiredPropertyMarker;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.beans.factory.config.DependencyDescriptor;
+import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.config.TypedStringValue;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.MethodParameter;
+import org.springframework.core.NamedThreadLocal;
+import org.springframework.core.NativeDetector;
+import org.springframework.core.ParameterNameDiscoverer;
+import org.springframework.core.PriorityOrdered;
+import org.springframework.core.ResolvableType;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.ReflectionUtils.MethodCallback;
+import org.springframework.util.StringUtils;
 
 /**
  * Abstract bean factory superclass that implements default bean creation,
@@ -634,10 +679,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		// 循环依赖被提前代理的场景，如果是这种场景 initializeBean 返回的并不是代理对象，而是原始对象
 		if (earlySingletonExposure) {
 			Object earlySingletonReference = getSingleton(beanName, false);
 			if (earlySingletonReference != null) {
+				// 判断原始对象是否发生变化，一般不会发生变化
+				// 什么时候会不等呢？如果循环依赖被提前代理，但是如果这个 Bean 又被其他 BPP 代理，
+				// 这种情况下就不等了
 				if (exposedObject == bean) {
+					// 返回代理对象
 					exposedObject = earlySingletonReference;
 				}
 				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
@@ -1247,19 +1297,25 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		 * 遍历后置处理器，得到实现了 SmartInstantiationAwareBeanPostProcessor 接口的实现类，
 		 * 实际上执行的后置处理器是 AutoWiredAnnotationBeanPostProcessor，执行它实现的接口方法，
 		 * 返回的构造器规则总结：
-		 * 	1) 如果只有 1 个带参构造方法，则返回就是该构造方法。
-		 * 	2) 其他情况，均返回 null.
-		 * 	上面的规则是实例化的 Bean 不是 Kotlin Type 的前提下。
-		 * Spring 的意思很明确，就是如果只有一个构造方法，那 Spring 就可以确定就是
-		 * 使用这个构造方法，但是如果你提供了多个，Spring 就无法确定使用了哪个，所以
-		 * 它返回 null。
+		 * 	1) 如果只有一个 @Autowired(required = true) 注解的构造器，返回该构造器，如果也有无参构造器，无参构造器也会一并返回。
+		 * 	2) 如果有一个 @Autowired(required = true) 注解构造器，还有其他 @Autowired 的构造器，均抛出异常。
+		 * 	3) 如果有多个 @Autowired(required = false) 注解的构造器，返回这些构造器，如果也有无参构造器，无参构造器也会一并返回。
+		 * 	4) 如果没有任何 @Autowired 注解，但是有且只有 1 个带参构造方法，则返回就是该构造方法。
+		 * 	5) 如果只有一个无参构造或无构造器，返回 null。
+		 * 	6) 如果有多个带参数构造，返回 null。
+		 * Note:
+		 * 	1) 上面的规则是实例化的 Bean 不是 Kotlin Type 的前提下。
+		 * 	2) 有 @Autowired 注解构造器的场景下，也可以有若干个没有 @Autowired 的构造器，只是 Spring 不会处理，因为会优先使用 @Autowired 的构造器
+		 * Spring 的意思很明确，就是如果有 @Autowired(required = true) 的构造器或者只有一个普通的带参构造器，那 Spring 就可以确定就是使用这个构造方法，
+		 * 但是如果你提供了多个 @Autowired(required = false) 或者普通构造器，Spring 就无法确定使用了哪个，所以它返回 null。
 		 */
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		/**
 		 * 这个 if 表示是通过构造方法来实例化对象，判断条件有：
-		 * 	1) ctors != null 这个容易理解，上面确定了唯一的构造方法。
-		 * 	2) 自动装配模型是 AUTOWIRE_CONSTRUCTOR，所以需要根据构造方法来实例化。
+		 * 	1) ctors != null 这个容易理解，上面确定了方法返回了具体构造方法。
+		 * 	2) 自动装配模型是 AUTOWIRE_CONSTRUCTOR，表示让 Spring 来决定使用哪个构造器，并自动完成装配。
 		 * 	3) mbd.hasConstructorArgumentValues() 表示提供了构造方法参数，那肯定需要根据构造方法来实例化。
+		 * 	4) args 不为空，表示实例化 bean 时指定了具体的参数，如通过 applicationContext.getBean(BeanClass, args) 方法
 		 * 	注:可以通过实现 BeanFactoryPostProcessor 接口，获取 BeanDefinition，然后通过 BeanDefinition 给
 		 * Bean 提供构造方法参数，MyBatis 就是使用了这种方式来实例化 MapperFactoryBean 的。
 		 *
@@ -1279,6 +1335,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
+		// ctors = null 的场景，即只有无参构造或多个带参构造器
 		// 默认无参构造实例化 Bean
 		return instantiateBean(beanName, mbd);
 	}
