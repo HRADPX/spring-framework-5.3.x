@@ -16,6 +16,27 @@
 
 package org.springframework.context.annotation;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.function.Predicate;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeanUtils;
@@ -38,8 +59,11 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.CompositePropertySource;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
-import org.springframework.core.env.*;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.DefaultPropertySourceFactory;
@@ -54,15 +78,12 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
-import org.springframework.util.*;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.*;
-import java.util.function.Predicate;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 
 /**
  * Parses a {@link Configuration} class definition, populating a collection of
@@ -807,7 +828,11 @@ class ConfigurationClassParser {
 	 * 在完成配置文件解析后，在处理这些类。
 	 * @see ConfigurationClassParser#parse(java.util.Set) --> this.deferredImportSelectorHandler.process();
 	 * Note: 直接实现了 ImportSelector 的类会被直接解析。
-	 * todo huangran 为什么 SpringBoot 自动装配的配置类需要延迟解析
+	 * 为什么 SpringBoot 自动装配的配置类需要延迟解析？
+	 * 因为不是从依赖里加载的所有的自动装配类都需要进行自动装配，SpringBoot 的自动装配类上通常有若干个 @Conditional 注解，
+	 * 使用这个注解的 Bean 在解析、注册前需要回调接口里的 Condtion#matches 方法判断是否需要注册。
+	 * 例如 @ConditionalOnBean 就表示 Spring 容器中包含某个 Bean 才会进行注册，Spring Bean 注册是有先后顺序的，
+	 * 如果自动装配不在项目配置解析完成后进行，可能会导致一些配置类因为 @Conditional 不满足条件而无法自动装配的问题。
 	 */
 	private class DeferredImportSelectorHandler {
 
@@ -847,6 +872,7 @@ class ConfigurationClassParser {
 					// 排序
 					deferredImports.sort(DEFERRED_IMPORT_COMPARATOR);
 					deferredImports.forEach(handler::register);
+					// 再执行 import
 					handler.processGroupImports();
 				}
 			}
@@ -869,12 +895,14 @@ class ConfigurationClassParser {
 			// 执行接口的 getImportGroup 方法
 			// SpringBoot ---> org.springframework.boot.autoconfigure.AutoConfigurationImportSelector.AutoConfigurationGroup
 			Class<? extends Group> group = deferredImport.getImportSelector().getImportGroup();
+			// 包装了上面的 Group 的实现
 			// createGroup(group) 反射生成 Group 实例，处理 Aware 接口
 			// 存储 DeferredImportSelectorGrouping（包装了 Group 和 DeferredImportSelectorHolder (ImportSelector + config class)）
 			DeferredImportSelectorGrouping grouping = this.groupings.computeIfAbsent(
 					(group != null ? group : deferredImport),
 					key -> new DeferredImportSelectorGrouping(createGroup(group)));
 			grouping.add(deferredImport);
+			// configurationClass.Metadata -> configurationClass
 			this.configurationClasses.put(deferredImport.getConfigurationClass().getMetadata(),
 					deferredImport.getConfigurationClass());
 		}
@@ -882,6 +910,7 @@ class ConfigurationClassParser {
 		// SpringBoot 自动装配类的真正解析
 		/** @see ConfigurationClassParser#parse(java.util.Set) --> this.deferredImportSelectorHandler.process() */
 		public void processGroupImports() {
+			// 注册的时候放进去的 Group 的一个实现类
 			for (DeferredImportSelectorGrouping grouping : this.groupings.values()) {
 				// 过滤
 				/** @see ConfigurationClassParser.DEFAULT_EXCLUSION_FILTER */
@@ -942,6 +971,7 @@ class ConfigurationClassParser {
 	}
 
 
+	// 包装 DeferredImportSelector.Group
 	private static class DeferredImportSelectorGrouping {
 
 		private final DeferredImportSelector.Group group;
